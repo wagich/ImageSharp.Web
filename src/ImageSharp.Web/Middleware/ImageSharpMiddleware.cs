@@ -155,7 +155,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
         public async Task Invoke(HttpContext context)
 #pragma warning restore IDE1006 // Naming Styles
         {
-            IDictionary<string, string> commands = this.requestParser.ParseRequestCommands(context);
+            IDictionary<string, string> commands = await this.requestParser.ParseRequestCommandsAsync(context);
             if (commands.Count > 0)
             {
                 foreach (string command in new List<string>(commands.Keys))

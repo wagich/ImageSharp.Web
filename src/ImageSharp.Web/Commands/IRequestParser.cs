@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
 namespace SixLabors.ImageSharp.Web.Commands
@@ -16,6 +17,6 @@ namespace SixLabors.ImageSharp.Web.Commands
         /// </summary>
         /// <param name="context">Encapsulates all HTTP-specific information about an individual HTTP request.</param>
         /// <returns>The <see cref="IDictionary{TKey,TValue}"/>.</returns>
-        IDictionary<string, string> ParseRequestCommands(HttpContext context);
+        ValueTask<IDictionary<string, string>> ParseRequestCommandsAsync(HttpContext context);
     }
 }

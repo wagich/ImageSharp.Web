@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
@@ -15,11 +16,11 @@ namespace SixLabors.ImageSharp.Web.Commands
     public sealed class QueryCollectionRequestParser : IRequestParser
     {
         /// <inheritdoc/>
-        public IDictionary<string, string> ParseRequestCommands(HttpContext context)
+        public ValueTask<IDictionary<string, string>> ParseRequestCommandsAsync(HttpContext context)
         {
             if (context.Request.Query.Count == 0)
             {
-                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return new ValueTask<IDictionary<string, string>>(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
             }
 
             Dictionary<string, StringValues> parsed = QueryHelpers.ParseQuery(context.Request.QueryString.ToUriComponent());
@@ -29,7 +30,7 @@ namespace SixLabors.ImageSharp.Web.Commands
                 transformed[pair.Key] = pair.Value.ToString();
             }
 
-            return transformed;
+            return new ValueTask<IDictionary<string, string>>(transformed);
         }
     }
 }

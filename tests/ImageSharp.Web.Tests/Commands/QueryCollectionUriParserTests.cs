@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using SixLabors.ImageSharp.Web.Commands;
 using Xunit;
@@ -12,7 +13,7 @@ namespace SixLabors.ImageSharp.Web.Tests.Commands
     public class QueryCollectionUriParserTests
     {
         [Fact]
-        public void QueryCollectionParserExtractsCommands()
+        public async Task QueryCollectionParserExtractsCommandsAsync()
         {
             IDictionary<string, string> expected = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -21,7 +22,7 @@ namespace SixLabors.ImageSharp.Web.Tests.Commands
             };
 
             HttpContext context = TestHelpers.CreateHttpContext();
-            IDictionary<string, string> actual = new QueryCollectionRequestParser().ParseRequestCommands(context);
+            IDictionary<string, string> actual = await new QueryCollectionRequestParser().ParseRequestCommandsAsync(context);
 
             Assert.Equal(expected, actual);
         }
