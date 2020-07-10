@@ -24,7 +24,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
     /// <summary>
     /// Middleware for handling the processing of images via image requests.
     /// </summary>
-    public class ImageSharpMiddleware
+    public class SyncMiddleware
     {
         /// <summary>
         /// The key-lock used for limiting identical requests.
@@ -99,7 +99,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
         /// <param name="cache">An <see cref="IImageCache"/> instance used for caching images.</param>
         /// <param name="cacheHash">An <see cref="ICacheHash"/>instance used for calculating cached file names.</param>
         /// <param name="formatUtilities">Contains various format helper methods based on the current configuration.</param>
-        public ImageSharpMiddleware(
+        public SyncMiddleware(
             RequestDelegate next,
             IOptions<ImageSharpMiddlewareOptions> options,
             ILoggerFactory loggerFactory,
@@ -155,6 +155,8 @@ namespace SixLabors.ImageSharp.Web.Middleware
         public async Task Invoke(HttpContext context)
 #pragma warning restore IDE1006 // Naming Styles
         {
+            this.logger.LogInformation("Processing request using SYNC callbacks.");
+
             IDictionary<string, string> commands = this.requestParser.ParseRequestCommands(context);
             if (commands.Count > 0)
             {
@@ -193,7 +195,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
             if (sourceImageResolver == null)
             {
                 // Log the error but let the pipeline handle the 404
-                var imageContext = new ImageContext(context, this.options);
+                var imageContext = new SyncImageContext(context, this.options);
                 this.logger.LogImageResolveFailed(imageContext.GetDisplayUrl());
                 processRequest = false;
             }
@@ -205,10 +207,10 @@ namespace SixLabors.ImageSharp.Web.Middleware
                 return;
             }
 
-            await this.ProcessRequestAsync(context, processRequest, sourceImageResolver, new ImageContext(context, this.options), commands);
+            await this.ProcessRequestAsync(context, processRequest, sourceImageResolver, new SyncImageContext(context, this.options), commands);
         }
 
-        private async Task ProcessRequestAsync(HttpContext context, bool processRequest, IImageResolver sourceImageResolver, ImageContext imageContext, IDictionary<string, string> commands)
+        private async Task ProcessRequestAsync(HttpContext context, bool processRequest, IImageResolver sourceImageResolver, SyncImageContext imageContext, IDictionary<string, string> commands)
         {
             // Create a cache key based on all the components of the requested url
             string uri = GetUri(context, commands);
@@ -321,14 +323,14 @@ namespace SixLabors.ImageSharp.Web.Middleware
             }
         }
 
-        private async Task SendResponseAsync(ImageContext imageContext, string key, Stream stream, ImageCacheMetadata metadata)
+        private async Task SendResponseAsync(SyncImageContext imageContext, string key, Stream stream, ImageCacheMetadata metadata)
         {
             imageContext.ComprehendRequestHeaders(metadata.CacheLastWriteTimeUtc, stream.Length);
 
             switch (imageContext.GetPreconditionState())
             {
-                case ImageContext.PreconditionState.Unspecified:
-                case ImageContext.PreconditionState.ShouldProcess:
+                case SyncImageContext.PreconditionState.Unspecified:
+                case SyncImageContext.PreconditionState.ShouldProcess:
                     if (imageContext.IsHeadRequest())
                     {
                         await imageContext.SendStatusAsync(ResponseConstants.Status200Ok, metadata);
@@ -339,11 +341,11 @@ namespace SixLabors.ImageSharp.Web.Middleware
 
                     break;
 
-                case ImageContext.PreconditionState.NotModified:
+                case SyncImageContext.PreconditionState.NotModified:
                     this.logger.LogImageNotModified(imageContext.GetDisplayUrl());
                     await imageContext.SendStatusAsync(ResponseConstants.Status304NotModified, metadata);
                     break;
-                case ImageContext.PreconditionState.PreconditionFailed:
+                case SyncImageContext.PreconditionState.PreconditionFailed:
                     this.logger.LogImagePreconditionFailed(imageContext.GetDisplayUrl());
                     await imageContext.SendStatusAsync(ResponseConstants.Status412PreconditionFailed, metadata);
                     break;

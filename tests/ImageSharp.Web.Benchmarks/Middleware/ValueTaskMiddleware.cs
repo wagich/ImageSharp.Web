@@ -24,7 +24,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
     /// <summary>
     /// Middleware for handling the processing of images via image requests.
     /// </summary>
-    public class ImageSharpMiddleware
+    public class ValueTaskMiddleware
     {
         /// <summary>
         /// The key-lock used for limiting identical requests.
@@ -99,7 +99,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
         /// <param name="cache">An <see cref="IImageCache"/> instance used for caching images.</param>
         /// <param name="cacheHash">An <see cref="ICacheHash"/>instance used for calculating cached file names.</param>
         /// <param name="formatUtilities">Contains various format helper methods based on the current configuration.</param>
-        public ImageSharpMiddleware(
+        public ValueTaskMiddleware(
             RequestDelegate next,
             IOptions<ImageSharpMiddlewareOptions> options,
             ILoggerFactory loggerFactory,
@@ -155,6 +155,8 @@ namespace SixLabors.ImageSharp.Web.Middleware
         public async Task Invoke(HttpContext context)
 #pragma warning restore IDE1006 // Naming Styles
         {
+            this.logger.LogInformation("Processing request using VALUE TASK ASYNC callbacks.");
+
             IDictionary<string, string> commands = this.requestParser.ParseRequestCommands(context);
             if (commands.Count > 0)
             {
@@ -167,7 +169,10 @@ namespace SixLabors.ImageSharp.Web.Middleware
                 }
             }
 
-            this.options.OnParseCommands?.Invoke(new ImageCommandContext(context, commands, CommandParser.Instance));
+            if (this.options.OnParseCommandsAsyncValueTask != null)
+            {
+                await this.options.OnParseCommandsAsyncValueTask.Invoke(new ImageCommandContext(context, commands, CommandParser.Instance));
+            }
 
             // Get the correct service for the request.
             IImageProvider provider = null;
@@ -193,7 +198,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
             if (sourceImageResolver == null)
             {
                 // Log the error but let the pipeline handle the 404
-                var imageContext = new ImageContext(context, this.options);
+                var imageContext = new ValueTaskImageContext(context, this.options);
                 this.logger.LogImageResolveFailed(imageContext.GetDisplayUrl());
                 processRequest = false;
             }
@@ -205,10 +210,10 @@ namespace SixLabors.ImageSharp.Web.Middleware
                 return;
             }
 
-            await this.ProcessRequestAsync(context, processRequest, sourceImageResolver, new ImageContext(context, this.options), commands);
+            await this.ProcessRequestAsync(context, processRequest, sourceImageResolver, new ValueTaskImageContext(context, this.options), commands);
         }
 
-        private async Task ProcessRequestAsync(HttpContext context, bool processRequest, IImageResolver sourceImageResolver, ImageContext imageContext, IDictionary<string, string> commands)
+        private async Task ProcessRequestAsync(HttpContext context, bool processRequest, IImageResolver sourceImageResolver, ValueTaskImageContext imageContext, IDictionary<string, string> commands)
         {
             // Create a cache key based on all the components of the requested url
             string uri = GetUri(context, commands);
@@ -273,7 +278,11 @@ namespace SixLabors.ImageSharp.Web.Middleware
                                     using (var image = FormattedImage.Load(this.options.Configuration, inStream))
                                     {
                                         image.Process(this.logger, this.processors, commands);
-                                        this.options.OnBeforeSave?.Invoke(image);
+                                        if (this.options.OnBeforeSaveAsyncValueTask != null)
+                                        {
+                                            await this.options.OnBeforeSaveAsyncValueTask.Invoke(image);
+                                        }
+
                                         image.Save(outStream);
                                         format = image.Format;
                                     }
@@ -298,7 +307,11 @@ namespace SixLabors.ImageSharp.Web.Middleware
                             outStream.Position = 0;
                             string contentType = cachedImageMetadata.ContentType;
                             string extension = this.formatUtilities.GetExtensionFromContentType(contentType);
-                            this.options.OnProcessed?.Invoke(new ImageProcessingContext(context, outStream, commands, contentType, extension));
+                            if (this.options.OnProcessedAsyncValueTask != null)
+                            {
+                                await this.options.OnProcessedAsyncValueTask.Invoke(new ImageProcessingContext(context, outStream, commands, contentType, extension));
+                            }
+
                             outStream.Position = 0;
 
                             // Save the image to the cache and send the response to the caller.
@@ -321,14 +334,14 @@ namespace SixLabors.ImageSharp.Web.Middleware
             }
         }
 
-        private async Task SendResponseAsync(ImageContext imageContext, string key, Stream stream, ImageCacheMetadata metadata)
+        private async Task SendResponseAsync(ValueTaskImageContext imageContext, string key, Stream stream, ImageCacheMetadata metadata)
         {
             imageContext.ComprehendRequestHeaders(metadata.CacheLastWriteTimeUtc, stream.Length);
 
             switch (imageContext.GetPreconditionState())
             {
-                case ImageContext.PreconditionState.Unspecified:
-                case ImageContext.PreconditionState.ShouldProcess:
+                case ValueTaskImageContext.PreconditionState.Unspecified:
+                case ValueTaskImageContext.PreconditionState.ShouldProcess:
                     if (imageContext.IsHeadRequest())
                     {
                         await imageContext.SendStatusAsync(ResponseConstants.Status200Ok, metadata);
@@ -339,11 +352,11 @@ namespace SixLabors.ImageSharp.Web.Middleware
 
                     break;
 
-                case ImageContext.PreconditionState.NotModified:
+                case ValueTaskImageContext.PreconditionState.NotModified:
                     this.logger.LogImageNotModified(imageContext.GetDisplayUrl());
                     await imageContext.SendStatusAsync(ResponseConstants.Status304NotModified, metadata);
                     break;
-                case ImageContext.PreconditionState.PreconditionFailed:
+                case ValueTaskImageContext.PreconditionState.PreconditionFailed:
                     this.logger.LogImagePreconditionFailed(imageContext.GetDisplayUrl());
                     await imageContext.SendStatusAsync(ResponseConstants.Status412PreconditionFailed, metadata);
                     break;

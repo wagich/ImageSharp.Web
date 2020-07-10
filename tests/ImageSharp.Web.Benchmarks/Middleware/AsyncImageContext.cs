@@ -15,7 +15,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
     /// <summary>
     /// Provides information and methods regarding the current image request.
     /// </summary>
-    internal struct ImageContext
+    internal struct AsyncImageContext
     {
         private readonly ImageSharpMiddlewareOptions options;
         private readonly HttpContext context;
@@ -38,7 +38,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
         /// </summary>
         /// <param name="context">The current HTTP request context.</param>
         /// <param name="options">The middleware options.</param>
-        public ImageContext(HttpContext context, ImageSharpMiddlewareOptions options)
+        public AsyncImageContext(HttpContext context, ImageSharpMiddlewareOptions options)
         {
             this.context = context;
             this.request = context.Request;
@@ -125,12 +125,11 @@ namespace SixLabors.ImageSharp.Web.Middleware
         /// <param name="statusCode">The status code.</param>
         /// <param name="metaData">The image metadata.</param>
         /// <returns>The <see cref="Task"/>.</returns>
-        public Task SendStatusAsync(int statusCode, in ImageCacheMetadata metaData)
+        public async Task SendStatusAsync(int statusCode, ImageCacheMetadata metaData)
         {
-            this.ApplyResponseHeaders(statusCode, metaData.ContentType, this.ComputeMaxAge(metaData));
+            await this.ApplyResponseHeadersAsync(statusCode, metaData.ContentType, this.ComputeMaxAge(metaData));
 
             // this.logger.LogHandled(statusCode, SubPath);
-            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -141,7 +140,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
         /// <returns>The <see cref="Task"/>.</returns>
         public async Task SendAsync(Stream stream, ImageCacheMetadata metaData)
         {
-            this.ApplyResponseHeaders(ResponseConstants.Status200Ok, metaData.ContentType, this.ComputeMaxAge(metaData));
+            await this.ApplyResponseHeadersAsync(ResponseConstants.Status200Ok, metaData.ContentType, this.ComputeMaxAge(metaData));
 
             if (stream.CanSeek)
             {
@@ -170,7 +169,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
             return max;
         }
 
-        private void ApplyResponseHeaders(int statusCode, string contentType, TimeSpan maxAge)
+        private async Task ApplyResponseHeadersAsync(int statusCode, string contentType, TimeSpan maxAge)
         {
             this.response.StatusCode = statusCode;
             if (statusCode < 400)
@@ -193,7 +192,10 @@ namespace SixLabors.ImageSharp.Web.Middleware
                     MustRevalidate = true
                 };
 
-                this.options.OnPrepareResponse?.Invoke(this.context);
+                if (this.options.OnPrepareResponseAsync != null)
+                {
+                    await this.options.OnPrepareResponseAsync.Invoke(this.context);
+                }
             }
 
             if (statusCode == ResponseConstants.Status200Ok)

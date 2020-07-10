@@ -15,7 +15,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
     /// <summary>
     /// Provides information and methods regarding the current image request.
     /// </summary>
-    internal struct ImageContext
+    internal struct SyncImageContext
     {
         private readonly ImageSharpMiddlewareOptions options;
         private readonly HttpContext context;
@@ -38,7 +38,7 @@ namespace SixLabors.ImageSharp.Web.Middleware
         /// </summary>
         /// <param name="context">The current HTTP request context.</param>
         /// <param name="options">The middleware options.</param>
-        public ImageContext(HttpContext context, ImageSharpMiddlewareOptions options)
+        public SyncImageContext(HttpContext context, ImageSharpMiddlewareOptions options)
         {
             this.context = context;
             this.request = context.Request;

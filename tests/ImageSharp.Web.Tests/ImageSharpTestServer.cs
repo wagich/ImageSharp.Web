@@ -43,10 +43,10 @@ namespace SixLabors.ImageSharp.Web.Tests
                             options.MaxBrowserCacheDays = -1;
                             options.MaxCacheDays = -1;
                             options.CachedNameLength = 12;
-                            options.OnParseCommands = _ => Task.CompletedTask;
-                            options.OnBeforeSave = _ => Task.CompletedTask;
-                            options.OnProcessed = _ => Task.CompletedTask;
-                            options.OnPrepareResponse = _ => Task.CompletedTask;
+                            options.OnParseCommandsAsync = _ => Task.CompletedTask;
+                            options.OnBeforeSaveAsync = _ => Task.CompletedTask;
+                            options.OnProcessedAsync = _ => Task.CompletedTask;
+                            options.OnPrepareResponseAsync = _ => Task.CompletedTask;
                         })
                     .SetRequestParser<QueryCollectionRequestParser>()
                     .Configure<PhysicalFileSystemCacheOptions>(_ => { })
@@ -74,10 +74,10 @@ namespace SixLabors.ImageSharp.Web.Tests
                         options.MaxBrowserCacheDays = -1;
                         options.MaxCacheDays = -1;
                         options.CachedNameLength = 12;
-                        options.OnParseCommands = _ => Task.CompletedTask;
-                        options.OnBeforeSave = _ => Task.CompletedTask;
-                        options.OnProcessed = _ => Task.CompletedTask;
-                        options.OnPrepareResponse = _ => Task.CompletedTask;
+                        options.OnParseCommandsAsync = _ => Task.CompletedTask;
+                        options.OnBeforeSaveAsync = _ => Task.CompletedTask;
+                        options.OnProcessedAsync = _ => Task.CompletedTask;
+                        options.OnPrepareResponseAsync = _ => Task.CompletedTask;
                     })
                     .SetRequestParser<QueryCollectionRequestParser>()
                     .Configure<PhysicalFileSystemCacheOptions>(_ => { })
@@ -112,10 +112,10 @@ namespace SixLabors.ImageSharp.Web.Tests
                     options.Configuration = Configuration.Default;
                     options.MaxBrowserCacheDays = -1;
                     options.MaxCacheDays = -1;
-                    options.OnParseCommands = onParseCommands;
-                    options.OnBeforeSave = onBeforeSave;
-                    options.OnProcessed = onProcessed;
-                    options.OnPrepareResponse = onPrepareResponse;
+                    options.OnParseCommandsAsync = onParseCommands;
+                    options.OnBeforeSaveAsync = onBeforeSave;
+                    options.OnProcessedAsync = onProcessed;
+                    options.OnPrepareResponseAsync = onPrepareResponse;
                 })
                 .SetRequestParser<QueryCollectionRequestParser>()
                 .Configure<PhysicalFileSystemCacheOptions>(_ => { })

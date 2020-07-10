@@ -35,11 +35,28 @@ namespace SixLabors.ImageSharp.Web.Middleware
         /// </summary>
         public uint CachedNameLength { get; set; } = 12;
 
-        /// <summary>
-        /// Gets or sets the additional command parsing method that can be used to used to augment commands.
-        /// This is called once the commands have been gathered and before an <see cref="IImageProvider"/> has been assigned.
-        /// </summary>
-        public Func<ImageCommandContext, Task> OnParseCommands { get; set; } = c =>
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning disable SA1600 // Elements should be documented
+#pragma warning disable SA1516 // Elements should be separated by blank line
+        public Action<ImageCommandContext> OnParseCommands { get; set; } = c =>
+        {
+            if (c.Commands.Count == 0)
+            {
+                return;
+            }
+
+            // It's a good idea to have this to provide very basic security.
+            // We can safely use the static resize processor properties.
+            uint width = c.Parser.ParseValue<uint>(c.Commands.GetValueOrDefault(ResizeWebProcessor.Width));
+            uint height = c.Parser.ParseValue<uint>(c.Commands.GetValueOrDefault(ResizeWebProcessor.Height));
+
+            if (width > 4000 && height > 4000)
+            {
+                c.Commands.Remove(ResizeWebProcessor.Width);
+                c.Commands.Remove(ResizeWebProcessor.Height);
+            }
+        };
+        public Func<ImageCommandContext, Task> OnParseCommandsAsync { get; set; } = c =>
         {
             if (c.Commands.Count != 0)
             {
@@ -57,26 +74,40 @@ namespace SixLabors.ImageSharp.Web.Middleware
 
             return Task.CompletedTask;
         };
+        public Func<ImageCommandContext, ValueTask> OnParseCommandsAsyncValueTask { get; set; } = c =>
+        {
+            if (c.Commands.Count != 0)
+            {
+                // It's a good idea to have this to provide very basic security.
+                // We can safely use the static resize processor properties.
+                uint width = c.Parser.ParseValue<uint>(c.Commands.GetValueOrDefault(ResizeWebProcessor.Width));
+                uint height = c.Parser.ParseValue<uint>(c.Commands.GetValueOrDefault(ResizeWebProcessor.Height));
 
-        /// <summary>
-        /// Gets or sets the additional method that can be used for final manipulation before the image is saved.
-        /// This is called after image has been processed, but before the image has been saved to the output stream for caching.
-        /// This can be used to alter the metadata of the resultant image.
-        /// </summary>
-        public Func<FormattedImage, Task> OnBeforeSave { get; set; } = _ => Task.CompletedTask;
+                if (width > 4000 && height > 4000)
+                {
+                    c.Commands.Remove(ResizeWebProcessor.Width);
+                    c.Commands.Remove(ResizeWebProcessor.Height);
+                }
+            }
 
-        /// <summary>
-        /// Gets or sets the additional processing method.
-        /// This is called after image has been processed, but before the result has been cached.
-        /// This can be used to further optimize the resultant image.
-        /// </summary>
-        public Func<ImageProcessingContext, Task> OnProcessed { get; set; } = _ => Task.CompletedTask;
+            return default;
+        };
 
-        /// <summary>
-        /// Gets or sets the additional response method.
-        /// This is called after the status code and headers have been set, but before the body has been written.
-        /// This can be used to add or change the response headers.
-        /// </summary>
-        public Func<HttpContext, Task> OnPrepareResponse { get; set; } = _ => Task.CompletedTask;
+        public Action<FormattedImage> OnBeforeSave { get; set; } = _ => { };
+        public Func<FormattedImage, Task> OnBeforeSaveAsync { get; set; } = _ => Task.CompletedTask;
+        public Func<FormattedImage, ValueTask> OnBeforeSaveAsyncValueTask { get; set; } = _ => default;
+
+        public Action<ImageProcessingContext> OnProcessed { get; set; } = _ => { };
+        public Func<ImageProcessingContext, Task> OnProcessedAsync { get; set; } = _ => Task.CompletedTask;
+        public Func<ImageProcessingContext, ValueTask> OnProcessedAsyncValueTask { get; set; } = _ => default;
+
+        public Action<HttpContext> OnPrepareResponse { get; set; } = _ => { };
+        public Func<HttpContext, Task> OnPrepareResponseAsync { get; set; } = _ => Task.CompletedTask;
+        public Func<HttpContext, ValueTask> OnPrepareResponseAsyncValueTask { get; set; } = _ => default;
+
+#pragma warning restore SA1516 // Elements should be separated by blank line
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+#pragma warning restore SA1600 // Elements should be documented
+
     }
 }
